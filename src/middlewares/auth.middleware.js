@@ -14,7 +14,7 @@ async function verifyJWT(req, res, next){
     
         const decodedValue = jwt.verify(token, process.env.JWT_SECRET)
     
-        const user = await User.findById(decodedValue?.id).select("-password")
+        const user = await User.findById(decodedValue?.id).select("-password  -lastPasswords")
     
         if(!user){
             return res.status(400).json({
