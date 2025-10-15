@@ -192,8 +192,12 @@ async function faqById(req,res) {
 
 async function faqByUser(req,res) {
     try {
+        
+        const{page=1, limit=2, search=""} = req.query
 
-        const faqs = await FAQ.find({created_by: req.user._id}).populate("cat_id")
+        const skip = (parseInt(page) - 1)*parseInt(limit)
+
+        const faqs = await FAQ.find({created_by: req.user._id, question:{$regex: search} }).skip(skip).limit(parseInt(limit)).populate("cat_id")
 
         res.status(200).json({
             message: "faq fetched successfully",
@@ -202,6 +206,7 @@ async function faqByUser(req,res) {
         })
 
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             message: "Error in faqByUser controller",
             success: false
