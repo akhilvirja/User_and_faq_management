@@ -3,6 +3,7 @@ import { jwtTokenGenerator } from "../services/jwtTokenGenerator.service.js"
 import { sendEmailVerificationEmail } from "../services/sendEmailVerificationEmail.service.js"
 import { sendWelcomeEmail } from "../services/sendWelcomeEmail.service.js"
 import jwt from "jsonwebtoken"
+import { z } from "zod"
 
 async function userSignup(req, res){
     try {
