@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema(
             enum : ['admin', 'user'],
             default : 'user',
         },
+        isEmailVerified:{
+            type: Boolean,
+            required: true,
+            default: false,
+        },
         lastPasswords : [
             lastPasswordsSchema,
         ]

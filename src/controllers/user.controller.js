@@ -1,7 +1,8 @@
 import { User } from "../models/user.model.js"
-import { z } from 'zod'
 import { jwtTokenGenerator } from "../services/jwtTokenGenerator.service.js"
-import nodemailer from 'nodemailer'
+import { sendEmailVerificationEmail } from "../services/sendEmailVerificationEmail.service.js"
+import { sendWelcomeEmail } from "../services/sendWelcomeEmail.service.js"
+import jwt from "jsonwebtoken"
 
 async function userSignup(req, res){
     try {
@@ -32,36 +33,17 @@ async function userSignup(req, res){
             })
         }
 
-        let transport = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 465,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            }
-        })
-
-        let mailOptions = {
-            from: "User and faq management system <no-reply@gmail.com>",
-            to: email,
-            subject: "Welcome to Our Service!",
-            html: `
-                <h1>Welcome, ${username}!</h1>
-                <p>Thank you for joining us. We're excited to have you on board.</p>
-                <p>If you have any questions, feel free to reply to this email.</p>
-                <br>
-                <p>Best Regards,<br>Your Company Team</p>
-            `
-        }
-
-        const mailinfo = await transport.sendMail(mailOptions)
-
+        await sendWelcomeEmail(username, email)
+        
         const createdUser = await User.create({
             username,
             email,
             password,
-        })
+        })       
 
+        const token = await jwtTokenGenerator({id:createdUser._id}, "30m")
+        await sendEmailVerificationEmail(email, token)
+        
         const user = await User.findById(createdUser._id).select("-password -lastPasswords")
     
         return res.status(200).json({
@@ -257,4 +239,49 @@ async function changePassword(req,res) {
     }
 }
 
-export {userSignup, userLogin, userLogout, updateUser, getUserDetails, changePassword}
+async function verifyUserEmail(req,res) {
+    try {
+        const token = req.query?.token
+
+        if(!token){
+            return res.status(400).json({
+                message: "please provide token",
+                success: false,
+            })
+        }
+
+        const decodedValue = jwt.verify(token, process.env.JWT_SECRET)
+
+        const user = await User.findById(decodedValue?.id).select("-password  -lastPasswords")
+
+        if(!user){
+            return res.status(400).json({
+                message : "Token is not valid",
+                success : false
+            })
+        }
+
+        if(user.isEmailVerified){
+            return res.status(400).json({
+                message : "Email is already verified",
+                success : false
+            })
+        }
+
+        user.isEmailVerified = true
+        await user.save()
+        return res.status(400).json({
+            message : "Email is verified successfully",
+            success : true
+        })
+        
+    } catch (error) {
+        console.log(error)
+        res.status(400).json({
+            message : "Token is not valid",
+            success : false
+        })
+    }
+}
+
+export {userSignup, userLogin, userLogout, updateUser, getUserDetails, changePassword, verifyUserEmail}
